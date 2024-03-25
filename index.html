@@ -1,74 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en" ng-app="expenseTrackerApp">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Tracker</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+</head>
+<body ng-controller="ExpenseController">
     <h1>Expense Tracker</h1>
 
     <main>
-      <header>
-        <div>
-          <h5>Total Balance</h5>
-          <span id="balance">$0.00</span>
-        </div>
-        <div>
-          <h5>Income</h5>
-          <span id="income">$0.00</span>
-        </div>
-        <div>
-          <h5>Expense</h5>
-          <span id="expense">$0.00</span>
-        </div>
-      </header>
+        <header>
+            <div>
+                <h5>Total Balance</h5>
+                <span id="balance">{{ balance | currency }}</span>
+            </div>
+            <div>
+                <h5>Income</h5>
+                <span id="income">{{ income | currency }}</span>
+            </div>
+            <div>
+                <h5>Expense</h5>
+                <span id="expense">{{ expense | currency }}</span>
+            </div>
+        </header>
 
-      <section>
-        <h3>Transactions</h3>
-        <ul id="transactionList"></ul>
-        <div id="status"></div>
-      </section>
+        <section>
+            <h3>Transactions</h3>
+            <ul id="transactionList">
+                <li ng-repeat="transaction in transactions">
+                    <div class="name">
+                        <h4>{{ transaction.name }}</h4>
+                        <p>{{ transaction.date | date: 'MM/dd/yyyy' }}</p>
+                    </div>
+                    <div class="amount" ng-class="{ 'income': transaction.type === 'income', 'expense': transaction.type === 'expense' }">
+                        <span>{{ transaction.amount | currency }}</span>
+                    </div>
+                    <div class="action">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" ng-click="deleteTransaction(transaction.id)">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </li>
+            </ul>
+            <div id="status"></div>
+        </section>
 
-      <section>
-        <h3>Add Transaction</h3>
+        <section>
+            <h3>Add Transaction</h3>
 
-        <form id="transactionForm">
-          <div>
-            <label for="type">
-              <input type="checkbox" name="type" id="type" />
-              <div class="option">
-                <span>Expense</span>
-                <span>Income</span>
-              </div>
-            </label>
-          </div>
-          <div>
-            <label for="name">Name</label>
-            <input type="text" name="name" required />
-          </div>
-          <div>
-            <label for="amount">Amount</label>
-            <input
-              type="number"
-              name="amount"
-              value="0"
-              min="0.01"
-              step="0.01"
-              required
-            />
-          </div>
-          <div>
-            <label for="date">Date</label>
-            <input type="date" name="date" required />
-          </div>
-          <button type="submit">Submit</button>
-        </form>
-      </section>
+            <form id="transactionForm" ng-submit="addTransaction()">
+                <div>
+                    <label for="type">
+                        <input type="checkbox" name="type" id="type" ng-model="transactionType" />
+                        <div class="option">
+                            <span>Expense</span>
+                            <span>Income</span>
+                        </div>
+                    </label>
+                </div>
+                <div>
+                    <label for="name">Name</label>
+                    <input type="text" name="name" ng-model="transactionName" required />
+                </div>
+                <div>
+                    <label for="amount">Amount</label>
+                    <input type="number" name="amount" ng-model="transactionAmount" min="0.01" step="0.01" required />
+                </div>
+                <div>
+                    <label for="date">Date</label>
+                    <input type="date" name="date" ng-model="transactionDate" required />
+                </div>
+                <button type="submit">Submit</button>
+            </form>
+        </section>
     </main>
 
-    <script src="script.js"></script>
-  </body>
+    <script>
+        angular.module('expenseTrackerApp', [])
+        .controller('ExpenseController', function($scope) {
+            $scope.transactions = [];
+            $scope.balance = 0;
+            $scope.income = 0;
+            $scope.expense = 0;
+            $scope.transactionType = false;
+            $scope.transactionName = '';
+            $scope.transactionAmount = 0;
+            $scope.transactionDate = '';
+
+            $scope.addTransaction = function() {
+                var type = $scope.transactionType ? 'income' : 'expense';
+                $scope.transactions.push({
+                    id: $scope.transactions.length + 1,
+                    name: $scope.transactionName,
+                    amount: parseFloat($scope.transactionAmount),
+                    date: $scope.transactionDate,
+                    type: type
+                });
+
+                $scope.transactionName = '';
+                $scope.transactionAmount = 0;
+                $scope.transactionDate = '';
+                $scope.updateTotal();
+            };
+
+            $scope.deleteTransaction = function(id) {
+                var index = $scope.transactions.findIndex(function(trx) {
+                    return trx.id === id;
+                });
+                $scope.transactions.splice(index, 1);
+                $scope.updateTotal();
+            };
+
+            $scope.updateTotal = function() {
+                $scope.income = $scope.transactions.filter(function(trx) {
+                    return trx.type === 'income';
+                }).reduce(function(total, trx) {
+                    return total + trx.amount;
+                }, 0);
+
+                $scope.expense = $scope.transactions.filter(function(trx) {
+                    return trx.type === 'expense';
+                }).reduce(function(total, trx) {
+                    return total + trx.amount;
+                }, 0);
+
+                $scope.balance = $scope.income - $scope.expense;
+            };
+        });
+    </script>
+</body>
 </html>
